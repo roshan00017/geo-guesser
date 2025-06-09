@@ -1,6 +1,5 @@
 import { COUNTRIES } from "../data/countries";
 import { useGeoGame } from "../hooks/useGeoGame";
-import { GameUI } from "./GameUI";
 import { MapInterface } from "./MapInterface";
 import { motion } from "framer-motion";
 
