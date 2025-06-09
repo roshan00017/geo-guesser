@@ -1,7 +1,7 @@
-import { MapInterface } from "./MapInterface";
-import { GameUI } from "./GameUI";
-import { useGeoGame } from "../hooks/useGeoGame";
 import { COUNTRIES } from "../data/countries";
+import { useGeoGame } from "../hooks/useGeoGame";
+import { GameUI } from "./GameUI";
+import { MapInterface } from "./MapInterface";
 
 export function CountryGame() {
   const {
@@ -15,12 +15,23 @@ export function CountryGame() {
     isAnswerLocked,
     handleGuess,
     restartGame,
+    mapCenter,
+    mapZoom,
   } = useGeoGame(COUNTRIES);
 
   const markers = [];
-  if (userGuess) markers.push({ position: userGuess, label: "Your guess" });
+  if (userGuess)
+    markers.push({
+      position: userGuess,
+      label: "Your guess",
+      color: "red", // Add color for wrong guess
+    });
   if (currentItem && message) {
-    markers.push({ position: currentItem.position, label: currentItem.name });
+    markers.push({
+      position: currentItem.position,
+      label: currentItem.name,
+      color: "green", // Add color for correct location
+    });
   }
 
   return (
@@ -38,10 +49,30 @@ export function CountryGame() {
 
       <div className="flex-grow p-4">
         <MapInterface
-          center={[20, 0]}
-          zoom={2}
+          center={mapCenter}
+          zoom={mapZoom}
           onMapClick={!isAnswerLocked ? handleGuess : undefined}
-          markers={markers}
+          markers={[
+            ...(userGuess
+              ? [
+                  {
+                    position: userGuess,
+                    label: "Your guess",
+                    color: "red" as const,
+                  },
+                ]
+              : []),
+            ...(currentItem && message
+              ? [
+                  {
+                    position: currentItem.position,
+                    label: currentItem.name,
+                    color: "green" as const,
+                  },
+                ]
+              : []),
+          ]}
+          animateToLocation={Boolean(message)} // Animate when showing answer
         />
       </div>
     </div>
