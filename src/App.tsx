@@ -11,13 +11,7 @@ export function App() {
               to="/country"
               className="px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              Country Quiz
-            </Link>
-            <Link
-              to="/city"
-              className="px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              City Quiz
+              Country Guess
             </Link>
           </div>
         </nav>

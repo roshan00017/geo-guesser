@@ -1,70 +1,97 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from "react";
 
-export function useGeoGame<T extends { name: string; position: [number, number] }>(
-  items: T[],
-  rounds: number
-) {
-  const [currentItem, setCurrentItem] = useState<T | null>(null)
-  const [score, setScore] = useState(0)
-  const [round, setRound] = useState(1)
-  const [gameOver, setGameOver] = useState(false)
-  const [message, setMessage] = useState('')
-  const [userGuess, setUserGuess] = useState<[number, number] | null>(null)
+const GAME_DURATION = 60; // 60 seconds
+const HIGH_SCORE_KEY = "geoGuessHighScore";
 
+export function useGeoGame<
+  T extends { name: string; position: [number, number] }
+>(items: T[]) {
+  const [currentItem, setCurrentItem] = useState<T | null>(null);
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(() => {
+    return parseInt(localStorage.getItem(HIGH_SCORE_KEY) || "0");
+  });
+  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
+  const [gameOver, setGameOver] = useState(false);
+  const [message, setMessage] = useState("");
+  const [userGuess, setUserGuess] = useState<[number, number] | null>(null);
+  const [isAnswerLocked, setIsAnswerLocked] = useState(false);
+
+  const selectRandomItem = useCallback(() => {
+    const randomIndex = Math.floor(Math.random() * items.length);
+    setCurrentItem(items[randomIndex]);
+    setUserGuess(null);
+    setIsAnswerLocked(false);
+  }, [items]);
+
+  // Initialize game
   useEffect(() => {
-    if (items.length > 0) selectRandomItem()
-  }, [items])
+    if (items.length > 0) selectRandomItem();
+  }, [items, selectRandomItem]);
 
-  const selectRandomItem = () => {
-    const randomIndex = Math.floor(Math.random() * items.length)
-    setCurrentItem(items[randomIndex])
-    setUserGuess(null)
-  }
+  // Timer logic
+  useEffect(() => {
+    if (!gameOver && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else if (timeLeft === 0 && !gameOver) {
+      setGameOver(true);
+      if (score > highScore) {
+        setHighScore(score);
+        localStorage.setItem(HIGH_SCORE_KEY, score.toString());
+      }
+    }
+  }, [timeLeft, gameOver, score, highScore]);
 
   const handleGuess = (guess: [number, number]) => {
-    if (!currentItem) return
-    
-    setUserGuess(guess)
-    const distance = calculateDistance(guess, currentItem.position)
-    const isCorrect = distance < (rounds === 10 ? 10 : 5) // Adjust threshold based on game mode
-    
+    if (!currentItem || gameOver || isAnswerLocked) return;
+
+    setUserGuess(guess);
+    setIsAnswerLocked(true);
+    const distance = calculateDistance(guess, currentItem.position);
+    const isCorrect = distance < 10; // 10 degrees threshold
+
     if (isCorrect) {
-      setScore(score + 100)
-      setMessage(`Correct! It's ${currentItem.name}`)
+      setScore(score + 100);
+      setMessage(`Correct! It's ${currentItem.name}`);
     } else {
-      setMessage(`Wrong! Try again. (${currentItem.name})`)
+      setMessage(`Wrong! It's ${currentItem.name}`);
     }
-    
-    if (round >= rounds) {
-      setGameOver(true)
-    } else {
-      setTimeout(() => {
-        selectRandomItem()
-        setRound(round + 1)
-        setMessage('')
-      }, 2000)
-    }
-  }
+
+    setTimeout(() => {
+      selectRandomItem();
+      setMessage("");
+    }, 2000);
+  };
+
+  const restartGame = () => {
+    setScore(0);
+    setTimeLeft(GAME_DURATION);
+    setGameOver(false);
+    setMessage("");
+    selectRandomItem();
+  };
 
   return {
     currentItem,
     score,
-    round,
+    highScore,
+    timeLeft,
     gameOver,
     message,
     userGuess,
+    isAnswerLocked,
     handleGuess,
-    selectRandomItem,
-    restartGame: () => {
-      setScore(0)
-      setRound(1)
-      setGameOver(false)
-      selectRandomItem()
-    },
-  }
+    restartGame,
+  };
 }
 
-function calculateDistance([lat1, lon1]: [number, number], [lat2, lon2]: [number, number]) {
-  // Simple distance calculation for demo
-  return Math.sqrt(Math.pow(lat1 - lat2, 2) + Math.pow(lon1 - lon2, 2))
+function calculateDistance(
+  [lat1, lon1]: [number, number],
+  [lat2, lon2]: [number, number]
+) {
+  return Math.sqrt(Math.pow(lat1 - lat2, 2) + Math.pow(lon1 - lon2, 2));
 }
